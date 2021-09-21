@@ -1,0 +1,41 @@
+input {
+    file {
+        path => "/Users/rucombs/Test/run/*.csv"
+        start_position => "beginning"
+        sincedb_path => "/dev/null"
+    }
+}
+
+filter {
+    csv {
+        separator => ","
+        columns => [ 
+            "timestamp", "pkt_num", "proto", "pkt_gen", "pkt_len", "dir",
+            "src_addr", "src_port", "dst_addr", "dst_port", "service",
+            "rule", "priority", "class", "action", "b64_data"
+        ]
+    }
+    mutate {
+        convert => { 
+            "pkt_num" => "integer"
+            "pkt_len" => "integer"
+            "src_port" => "integer"
+            "dst_port" => "integer"
+            "priority" => "integer"
+        }
+        gsub => ["timestamp", "\d{3}$", ""]
+    }
+    date {
+        match => [ "timestamp", "yy/MM/dd-HH:mm:ss.SSS" ]
+    }
+    geoip { source => "src_addr" }
+}
+
+output {
+    elasticsearch {
+        hosts => "http://localhost:9200"
+        index => "logstash-snort3"
+    }
+    stdout { }
+}
+
